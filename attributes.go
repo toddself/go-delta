@@ -7,7 +7,7 @@ type AttributeMap map[string]interface{}
 func (am AttributeMap) Compose(a, b *AttributeMap, keepNil bool) AttributeMap {
 	attributes := make(AttributeMap)
 	for k, v := range *b {
-		if v == nil || keepNil {
+		if v != nil || keepNil {
 			attributes[k] = v
 		}
 	}
@@ -25,11 +25,28 @@ func (am AttributeMap) Compose(a, b *AttributeMap, keepNil bool) AttributeMap {
 // Diff two attribute maps, returning a list of items in b that don't match
 // corresponding values in a (or don't exist in a)
 func (am AttributeMap) Diff(a, b *AttributeMap) AttributeMap {
+	var keys []string
+	for k := range *a {
+		keys = append(keys, k)
+	}
+	for k := range *b {
+		for a := range keys {
+			if keys[a] != k {
+				keys = append(keys, k)
+			}
+		}
+	}
+
 	attributes := make(AttributeMap)
-	for k, valB := range *b {
-		valA, ok := (*a)[k]
-		if ok && valA != valB {
-			attributes[k] = valB
+	for _, k := range keys {
+		valA, _ := (*a)[k]
+		valB, okB := (*b)[k]
+		if valA != valB {
+			if !okB {
+				attributes[k] = nil
+			} else {
+				attributes[k] = valB
+			}
 		}
 	}
 
@@ -58,9 +75,12 @@ func (am AttributeMap) Invert(attr, base *AttributeMap) AttributeMap {
 // Transform two attribute maps against each other
 func (am AttributeMap) Transform(a, b *AttributeMap, priority bool) AttributeMap {
 	transformed := make(AttributeMap)
-	// b wins in priority transforms
-	if priority {
-		return *b
+	// b wins in non-priority transforms
+	if !priority {
+		for k, v := range *b {
+			transformed[k] = v
+		}
+		return transformed
 	}
 
 	for k, v := range *b {
