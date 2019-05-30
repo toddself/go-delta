@@ -1,3 +1,3 @@
-module github.com/toddself/delta/iterator
+module github.com/toddself/go-delta/iterator
 
 go 1.12
